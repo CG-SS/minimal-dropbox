@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minimal-dropbox-dev
+  labels:
+    app: minimal-dropbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minimal-dropbox
+  template:
+    metadata:
+      labels:
+        app: minimal-dropbox
+    spec:
+      hostname: minimal-dropbox-nodeport
+      containers:
+        - env:
+            - name: STORAGE_SYSTEM
+              value: "file_system"
+            - name: REST_SYSTEM
+              value: "gin"
+            - name: REST_PORT
+              value: "12000"
+            - name: REST_HOST
+              value: "0.0.0.0"
+            - name: GIN_MODE
+              value: "release"
+          image: cgss/minimal-dropbox:0.1.0
+          name: minimal-dropbox
+          ports:
+            - containerPort: 12000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minimal-dropbox-nodeport
+  labels:
+    app: minimal-dropbox
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 12000
+      targetPort: 12000
+  selector:
+    app: minimal-dropbox
