@@ -2,6 +2,7 @@ package rest
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"mininal-dropbox/storage"
 	"reflect"
@@ -12,12 +13,14 @@ func TestNewServerCreatesNopServer(t *testing.T) {
 	var cfg Config
 	cfg.System = Nop
 
+	nopLogging := zerolog.Nop()
+
 	var storeCfg storage.Config
 	storeCfg.System = storage.Nop
-	store, err := storage.NewStorage(storeCfg)
+	store, err := storage.NewStorage(storeCfg, nopLogging)
 	assert.NoError(t, err)
 
-	server, err := NewServer(cfg, store)
+	server, err := NewServer(cfg, store, nopLogging)
 	assert.NoError(t, err)
 
 	var nServer *nopServer
@@ -32,12 +35,14 @@ func TestNewServerCreatesGinServer(t *testing.T) {
 	cfg.Port = 12345
 	cfg.Host = "localhost"
 
+	nopLogging := zerolog.Nop()
+
 	var storeCfg storage.Config
 	storeCfg.System = storage.Nop
-	store, err := storage.NewStorage(storeCfg)
+	store, err := storage.NewStorage(storeCfg, nopLogging)
 	assert.NoError(t, err)
 
-	server, err := NewServer(cfg, store)
+	server, err := NewServer(cfg, store, nopLogging)
 	assert.NoError(t, err)
 
 	var nServer *ginServer
@@ -52,12 +57,14 @@ func TestNewServerFailsWithUnknownSystem(t *testing.T) {
 	cfg.Port = 12345
 	cfg.Host = "localhost"
 
+	nopLogging := zerolog.Nop()
+
 	var storeCfg storage.Config
 	storeCfg.System = storage.Nop
-	store, err := storage.NewStorage(storeCfg)
+	store, err := storage.NewStorage(storeCfg, nopLogging)
 	assert.NoError(t, err)
 
-	server, err := NewServer(cfg, store)
+	server, err := NewServer(cfg, store, nopLogging)
 	assert.Error(t, err)
 	assert.Nil(t, server)
 }

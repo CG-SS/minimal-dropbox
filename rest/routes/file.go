@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"io"
-	"log"
 	"mininal-dropbox/storage"
 	"net/http"
 )
 
-type uploadFilesResponse struct {
+type UploadFilesResponse struct {
 	NumUploadedFiles int `json:"num_uploaded_files"`
 }
 
-func UploadFiles(store storage.Storage) gin.HandlerFunc {
+func UploadFiles(store storage.Storage, logging zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		form, err := c.MultipartForm()
 		if err != nil {
@@ -27,26 +27,26 @@ func UploadFiles(store storage.Storage) gin.HandlerFunc {
 		for _, file := range files {
 			fileHandle, err := file.Open()
 			if err != nil {
-				log.Printf("failed to open file header: %v", err)
+				logging.Warn().Err(err).Msg("failed to open file header")
 				continue
 			}
 
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, fileHandle); err != nil {
-				log.Printf("failed copying file to buffer: %v", err)
+				logging.Warn().Err(err).Msg("failed copying file to buffer")
 				continue
 			}
 
 			err = store.StoreFile(file.Filename, buf.Bytes())
 			if err != nil {
-				log.Printf("failed saving file: %v", err)
+				logging.Warn().Err(err).Msg("failed saving file")
 				continue
 			}
 
 			numUploadedFiles++
 		}
 
-		c.JSON(http.StatusOK, uploadFilesResponse{NumUploadedFiles: numUploadedFiles})
+		c.JSON(http.StatusOK, UploadFilesResponse{NumUploadedFiles: numUploadedFiles})
 	}
 }
 
@@ -64,7 +64,7 @@ func GetFile(store storage.Storage) gin.HandlerFunc {
 	}
 }
 
-type listFilesResponse struct {
+type ListFilesResponse struct {
 	Filenames []string `json:"filenames"`
 }
 
@@ -76,6 +76,20 @@ func ListFiles(store storage.Storage) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, listFilesResponse{Filenames: filenames})
+		c.JSON(http.StatusOK, ListFilesResponse{Filenames: filenames})
+	}
+}
+
+func DeleteFile(store storage.Storage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		filename := c.Param("filename")
+
+		err := store.DeleteFile(filename)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusBadRequest, fmt.Errorf("delete file error: %w", err))
+			return
+		}
+
+		c.Status(http.StatusNoContent)
 	}
 }

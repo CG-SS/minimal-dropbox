@@ -6,10 +6,10 @@ import (
 	"net/http"
 )
 
-type healthResponse struct {
+type HealthResponse struct {
 	Message string `json:"message"`
 }
 
 func Health(c *gin.Context) {
-	c.JSON(http.StatusOK, healthResponse{Message: "up and running!"})
+	c.JSON(http.StatusOK, HealthResponse{Message: "up and running!"})
 }

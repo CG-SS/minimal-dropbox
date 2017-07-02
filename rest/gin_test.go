@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"mime/multipart"
@@ -11,7 +12,7 @@ import (
 	"mininal-dropbox/storage"
 	"net/http"
 	"net/http/httptest"
-	"testing" 
+	"testing"
 	"time"
 )
 
@@ -20,16 +21,18 @@ func setupRouter(t *testing.T) *gin.Engine {
 
 	gin.SetMode(gin.ReleaseMode)
 
+	nopLogging := zerolog.Nop()
+
 	var storeCfg storage.Config
 	storeCfg.System = storage.Nop
-	store, err := storage.NewStorage(storeCfg)
+	store, err := storage.NewStorage(storeCfg, nopLogging)
 	assert.NoError(t, err)
 
 	var cfg Config
 	cfg.HomeRouteEnabled = true
 	cfg.Cors.Enabled = false
 
-	router, err := createRouter(cfg, store)
+	router, err := createRouter(cfg, store, nopLogging)
 	assert.NoError(t, err)
 
 	return router
@@ -161,16 +164,18 @@ func TestUploadFile(t *testing.T) {
 
 	gin.SetMode(gin.ReleaseMode)
 
+	nopLogging := zerolog.Nop()
+
 	var storeCfg storage.Config
 	storeCfg.System = storage.Memory
-	store, err := storage.NewStorage(storeCfg)
+	store, err := storage.NewStorage(storeCfg, nopLogging)
 	assert.NoError(t, err)
 
 	var cfg Config
 	cfg.HomeRouteEnabled = false
 	cfg.Cors.Enabled = false
 
-	router, err := createRouter(cfg, store)
+	router, err := createRouter(cfg, store, nopLogging)
 	assert.NoError(t, err)
 
 	pr, pw := io.Pipe()
@@ -217,12 +222,14 @@ func TestClosesGinServerCloses(t *testing.T) {
 
 	gin.SetMode(gin.ReleaseMode)
 
+	nopLogging := zerolog.Nop()
+
 	var storeCfg storage.Config
 	storeCfg.System = storage.Memory
-	store, err := storage.NewStorage(storeCfg)
+	store, err := storage.NewStorage(storeCfg, nopLogging)
 	assert.NoError(t, err)
 
-	server, err := newGinServer(cfg, store)
+	server, err := newGinServer(cfg, store, nopLogging)
 	assert.NoError(t, err)
 	go server.Start()
 
@@ -243,16 +250,18 @@ func TestClosesGinServerCloses(t *testing.T) {
 func TestGinServerNoHomeRouteIfDisabled(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 
+	nopLogging := zerolog.Nop()
+
 	var storeCfg storage.Config
 	storeCfg.System = storage.Nop
-	store, err := storage.NewStorage(storeCfg)
+	store, err := storage.NewStorage(storeCfg, nopLogging)
 	assert.NoError(t, err)
 
 	var cfg Config
 	cfg.HomeRouteEnabled = false
 	cfg.Cors.Enabled = false
 
-	router, err := createRouter(cfg, store)
+	router, err := createRouter(cfg, store, nopLogging)
 	assert.NoError(t, err)
 
 	w := httptest.NewRecorder()

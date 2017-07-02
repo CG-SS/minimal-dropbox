@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
-) 
+)
 
 func TestEnvconfigExtractsAllConfigs(t *testing.T) {
 	type envTest struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"log"
+	"github.com/rs/zerolog"
 	"mininal-dropbox/rest/routes"
 	"mininal-dropbox/storage"
 	"net/http"
@@ -13,31 +13,22 @@ import (
 )
 
 type ginServer struct {
+	logging    zerolog.Logger
 	httpServer http.Server
 	errChan    chan error
 }
 
-func newGinServer(cfg Config, store storage.Storage) (Server, error) {
-	router := gin.New()
+const homeRoutePath = "/"
+const healthRoutePath = "/health"
+const fileAllPath = "/file/all"
+const getFilePath = "/file/:filename"
+const uploadFilesPath = "/file/upload"
 
-	router.Use(logGinMiddleware())
-	router.Use(errorHandler())
-	router.Use(cors.New(cors.Config{
-		AllowOrigins: cfg.Cors.AllowOrigins,
-		AllowMethods: []string{"GET", "POST"},
-	}))
-
-	homeRoute, err := routes.Home(store)
+func newGinServer(cfg Config, store storage.Storage, logging zerolog.Logger) (Server, error) {
+	router, err := createRouter(cfg, store, logging)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating home route: %w", err)
+		return nil, fmt.Errorf("failed creating gin server: %w", err)
 	}
-
-	router.GET("/", homeRoute)
-	router.GET("/health", routes.Health)
-
-	router.GET("/file/all", routes.ListFiles(store))
-	router.GET("/file/:filename", routes.GetFile(store))
-	router.POST("/file/upload", routes.UploadFiles(store))
 
 	return &ginServer{
 		httpServer: http.Server{
@@ -48,7 +39,37 @@ func newGinServer(cfg Config, store storage.Storage) (Server, error) {
 	}, nil
 }
 
-func logGinMiddleware() gin.HandlerFunc {
+func createRouter(cfg Config, store storage.Storage, logging zerolog.Logger) (*gin.Engine, error) {
+	router := gin.New()
+
+	router.Use(zerologGinMiddleware(logging))
+	router.Use(errorHandler(logging))
+	if cfg.Cors.Enabled {
+		router.Use(cors.New(cors.Config{
+			AllowOrigins: cfg.Cors.AllowOrigins,
+			AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodDelete},
+		}))
+	}
+
+	homeRoute, err := routes.Home(store)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating home route: %w", err)
+	}
+
+	if cfg.HomeRouteEnabled {
+		router.GET(homeRoutePath, homeRoute)
+	}
+	router.GET(healthRoutePath, routes.Health)
+
+	router.GET(fileAllPath, routes.ListFiles(store))
+	router.GET(getFilePath, routes.GetFile(store))
+	router.DELETE(getFilePath, routes.DeleteFile(store))
+	router.POST(uploadFilesPath, routes.UploadFiles(store, logging))
+
+	return router, nil
+}
+
+func zerologGinMiddleware(logging zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Start timer
 		start := time.Now()
@@ -73,7 +94,16 @@ func logGinMiddleware() gin.HandlerFunc {
 			path = path + "?" + raw
 		}
 
-		log.Printf("latency: %v clientIP: %v method: %v statusCode: %v errorMessage: %v bodySize: %v path: %v", latency, clientIP, method, statusCode, errorMessage, bodySize, path)
+		logging.
+			Info().
+			Dur("latency", latency).
+			Str("clientIP", clientIP).
+			Str("method", method).
+			Int("statusCode", statusCode).
+			Str("errorMessage", errorMessage).
+			Int("bodySize", bodySize).
+			Str("path", path).
+			Msg("")
 	}
 }
 
@@ -81,13 +111,13 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-func errorHandler() gin.HandlerFunc {
+func errorHandler(logging zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 
 		if len(c.Errors) > 0 {
 			for _, ginErr := range c.Errors {
-				log.Printf("error: %v", ginErr)
+				logging.Error().Err(ginErr).Send()
 			}
 
 			// status -1 doesn't overwrite existing status code
