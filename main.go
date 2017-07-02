@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"github.com/rs/zerolog"
 	"mininal-dropbox/rest"
 	"mininal-dropbox/storage"
 	"os"
@@ -14,20 +15,23 @@ import (
 func main() {
 	cfg := NewConfig()
 
-	if !cfg.LoggingEnabled {
-		log.SetOutput(nil)
+	logging := zerolog.Nop()
+	if cfg.LoggingEnabled {
+		zerolog.SetGlobalLevel(zerolog.Level(cfg.LoggingLevel))
+
+		logging = zerolog.New(os.Stdout).With().Timestamp().Logger()
 	}
 
-	store, err := storage.NewStorage(cfg.Store)
+	store, err := storage.NewStorage(cfg.Store, logging)
 	if err != nil {
-		log.Fatal("failed initializing database")
+		logging.Fatal().Err(err).Msg("failed initializing database")
 	}
 
-	log.Printf("starting server at %s:%d", cfg.Rest.Host, cfg.Rest.Port)
+	logging.Info().Msg(fmt.Sprintf("starting server at %s:%d", cfg.Rest.Host, cfg.Rest.Port))
 
-	restServer, err := rest.NewServer(cfg.Rest, store)
+	restServer, err := rest.NewServer(cfg.Rest, store, logging)
 	if err != nil {
-		log.Fatal("failed initializing server")
+		logging.Fatal().Err(err).Msg("failed initializing server")
 	}
 
 	go restServer.Start()
@@ -38,15 +42,15 @@ func main() {
 
 	select {
 	case serverErr := <-restServer.ErrChan():
-		log.Printf("got error from server, shutting down: %v", serverErr)
+		logging.Error().Err(serverErr).Msg("got error from server, shutting down...")
 	case s := <-sigs:
-		log.Printf("received signal, shutting down: %v", s)
+		logging.Info().Msg(fmt.Sprintf("received signal %v, shutting down...", s))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		err := restServer.Stop(ctx)
 		if err != nil {
-			log.Fatalf("got error while trying to shutdown http server: %v", err)
+			logging.Fatal().Err(err).Msg("got error while trying to shutdown http server")
 		}
 	}
 }
