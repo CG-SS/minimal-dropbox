@@ -1,4 +1,4 @@
-FROM golang:1.5-alpine as base
+FROM golang:1.8-alpine as base
 
 WORKDIR /app/prebid-server/
 
