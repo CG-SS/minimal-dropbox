@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"log"
+	"github.com/rs/zerolog"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,9 +10,10 @@ import (
 
 type fileSystem struct {
 	managedDir string
+	logging    zerolog.Logger
 }
 
-func newFileSystemStorage(cfg Config) (Storage, error) {
+func newFileSystemStorage(cfg Config, logging zerolog.Logger) (Storage, error) {
 	err := validateDirPath(cfg.ManagedDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file system storage: %w", err)
@@ -20,6 +21,7 @@ func newFileSystemStorage(cfg Config) (Storage, error) {
 
 	return fileSystem{
 		managedDir: cfg.ManagedDir,
+		logging:    logging,
 	}, nil
 }
 
@@ -41,13 +43,22 @@ func validateDirPath(dir string) error {
 	return nil
 }
 
+func (f fileSystem) DeleteFile(filename string) error {
+	err := os.Remove(path.Join(f.managedDir, filename))
+	if err != nil {
+		return fmt.Errorf("could not delete file %s: %w", filename, err)
+	}
+
+	return nil
+}
+
 func (f fileSystem) LoadFile(filename string) ([]byte, error) {
 	fileBytes, err := os.ReadFile(path.Join(f.managedDir, filename))
 	if err != nil {
 		return nil, fmt.Errorf("failed opening file: %w", err)
 	}
 
-	log.Printf("loaded file: %s", filename)
+	f.logging.Debug().Msg(fmt.Sprintf("loaded file: %s", filename))
 
 	return fileBytes, nil
 }
@@ -63,7 +74,7 @@ func (f fileSystem) ListFiles() ([]string, error) {
 		return nil, fmt.Errorf("failed listing files: %w", err)
 	}
 
-	log.Printf("found %d files", len(filenames))
+	f.logging.Debug().Msg(fmt.Sprintf("found %d files", len(filenames)))
 
 	return filenames, nil
 }
@@ -74,7 +85,7 @@ func (f fileSystem) StoreFile(filename string, data []byte) error {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
-	log.Printf("wrote file: %s", filename)
+	f.logging.Debug().Msg(fmt.Sprintf("wrote file: %s", filename))
 
 	return nil
 }

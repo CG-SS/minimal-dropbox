@@ -12,6 +12,12 @@ func newMemoryStorage() Storage {
 	}
 }
 
+func (m memoryStorage) DeleteFile(filename string) error {
+	delete(m.fileMap, filename)
+
+	return nil
+}
+
 func (m memoryStorage) StoreFile(filename string, data []byte) error {
 	m.fileMap[filename] = data
 
