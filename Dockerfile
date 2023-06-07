@@ -1,6 +1,6 @@
-FROM golang:1.8-alpine as base
+FROM golang:1.20-alpine as base
 
-WORKDIR /app/prebid-server/
+WORKDIR /app/minimal-dropbox/
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -17,13 +17,13 @@ FROM base as minimal-dropbox-builder
 ARG TARGETOS
 ARG TARGETARCH
 
-WORKDIR /app/prebid-server
-COPY --from=base /app/prebid-server /app/prebid-server/
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOPROXY="https://proxy.golang.org" go build -o minimal-dropbox-build -mod=vendor ./cmd/minimal-dropbox
+WORKDIR /app/minimal-dropbox
+COPY --from=base /app/minimal-dropbox /app/minimal-dropbox/
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOPROXY="https://proxy.golang.org" go build -o minimal-dropbox-build -mod=vendor .
 
 FROM scratch as minimal-dropbox
 
 WORKDIR /usr/local/bin
-COPY --from=minimal-dropbox-builder /app/prebid-server/minimal-dropbox-build ./minimal-dropbox
+COPY --from=minimal-dropbox-builder /app/minimal-dropbox/minimal-dropbox-build ./minimal-dropbox
 
 ENTRYPOINT ["./minimal-dropbox"]
