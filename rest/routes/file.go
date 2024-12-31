@@ -38,6 +38,12 @@ func UploadFiles(store storage.Storage, logging zerolog.Logger) gin.HandlerFunc 
 				continue
 			}
 
+			err = fileHandle.Close()
+			if err != nil {
+				logging.Warn().Err(err).Msg("failed closing file")
+				continue
+			}
+
 			numUploadedFiles++
 		}
 
