@@ -4,10 +4,12 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"html/template"
-	"mininal-dropbox/storage"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"mininal-dropbox/storage"
 )
 
 //go:embed static/index.html

@@ -2,10 +2,11 @@ package rest
 
 import (
 	"fmt"
-	"github.com/kelseyhightower/envconfig"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/kelseyhightower/envconfig"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEnvconfigExtractsAllConfigs(t *testing.T) {
@@ -28,6 +29,7 @@ func TestEnvconfigExtractsAllConfigs(t *testing.T) {
 	expectedCfg.Port = restPort
 	expectedCfg.System = restSysVal
 	expectedCfg.HomeRouteEnabled = homeEnabled
+	expectedCfg.BufferSize = 1024
 
 	envVarsTest := []envTest{
 		{

@@ -1,12 +1,14 @@
 package rest
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+
 	"mininal-dropbox/storage"
-	"reflect"
-	"testing"
 )
 
 func TestNewServerCreatesNopServer(t *testing.T) {

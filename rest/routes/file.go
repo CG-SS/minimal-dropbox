@@ -1,13 +1,14 @@
 package routes
 
 import (
-	"bytes"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"io"
+
 	"mininal-dropbox/storage"
-	"net/http"
 )
 
 type UploadFilesResponse struct {
@@ -31,13 +32,7 @@ func UploadFiles(store storage.Storage, logging zerolog.Logger) gin.HandlerFunc 
 				continue
 			}
 
-			buf := bytes.NewBuffer(nil)
-			if _, err := io.Copy(buf, fileHandle); err != nil {
-				logging.Warn().Err(err).Msg("failed copying file to buffer")
-				continue
-			}
-
-			err = store.StoreFile(file.Filename, buf.Bytes())
+			err = store.StoreFile(file.Filename, fileHandle)
 			if err != nil {
 				logging.Warn().Err(err).Msg("failed saving file")
 				continue
@@ -50,17 +45,31 @@ func UploadFiles(store storage.Storage, logging zerolog.Logger) gin.HandlerFunc 
 	}
 }
 
-func GetFile(store storage.Storage) gin.HandlerFunc {
+func GetFile(store storage.Storage, bufferSize int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		filename := c.Param("filename")
 
-		fileBytes, err := store.LoadFile(filename)
+		fileReader, err := store.LoadFile(filename)
 		if err != nil {
 			_ = c.AbortWithError(http.StatusBadRequest, fmt.Errorf("get file error: %w", err))
 			return
 		}
+		defer fileReader.Close()
 
-		c.Data(http.StatusOK, "application/octet-stream", fileBytes)
+		c.Stream(func(w io.Writer) bool {
+			buffer := make([]byte, bufferSize)
+
+			for {
+				_, err := fileReader.Read(buffer)
+				if err != nil {
+					return false
+				}
+				_, err = w.Write(buffer)
+				if err != nil {
+					return false
+				}
+			}
+		})
 	}
 }
 

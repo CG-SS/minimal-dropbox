@@ -3,7 +3,9 @@ package rest
 import (
 	"context"
 	"fmt"
+
 	"github.com/rs/zerolog"
+
 	"mininal-dropbox/storage"
 )
 

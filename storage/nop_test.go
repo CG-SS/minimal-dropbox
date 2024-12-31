@@ -1,9 +1,12 @@
 package storage
 
 import (
+	"bytes"
+	"io"
+	"testing"
+
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNopStoreDoesNothing(t *testing.T) {
@@ -13,7 +16,7 @@ func TestNopStoreDoesNothing(t *testing.T) {
 	filename := "file1.txt"
 	fileBytes := []byte("Testing nop")
 
-	err := store.StoreFile(filename, fileBytes)
+	err := store.StoreFile(filename, bytes.NewReader(fileBytes))
 	assert.NoError(t, err)
 
 	files, err := store.ListFiles()
@@ -22,5 +25,11 @@ func TestNopStoreDoesNothing(t *testing.T) {
 
 	file, err := store.LoadFile(filename)
 	assert.NoError(t, err)
-	assert.Nil(t, file)
+
+	fileAll, err := io.ReadAll(file)
+	assert.NoError(t, err)
+
+	assert.NotEqual(t, fileAll, []byte("Testing nop"))
+	err = file.Close()
+	assert.NoError(t, err)
 }

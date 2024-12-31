@@ -1,9 +1,10 @@
 package storage
 
 import (
+	"testing"
+
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewStorageFailsUnknown(t *testing.T) {

@@ -3,13 +3,15 @@ package rest
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+
 	"mininal-dropbox/rest/routes"
 	"mininal-dropbox/storage"
-	"net/http"
-	"time"
 )
 
 type ginServer struct {
@@ -62,7 +64,7 @@ func createRouter(cfg Config, store storage.Storage, logging zerolog.Logger) (*g
 	router.GET(healthRoutePath, routes.Health)
 
 	router.GET(fileAllPath, routes.ListFiles(store))
-	router.GET(getFilePath, routes.GetFile(store))
+	router.GET(getFilePath, routes.GetFile(store, cfg.BufferSize))
 	router.DELETE(getFilePath, routes.DeleteFile(store))
 	router.POST(uploadFilesPath, routes.UploadFiles(store, logging))
 

@@ -2,13 +2,15 @@ package storage
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/rs/zerolog"
 )
 
 type Storage interface {
 	DeleteFile(filename string) error
-	StoreFile(filename string, data []byte) error
-	LoadFile(filename string) ([]byte, error)
+	StoreFile(filename string, reader io.Reader) error
+	LoadFile(filename string) (io.ReadCloser, error)
 	ListFiles() ([]string, error)
 }
 

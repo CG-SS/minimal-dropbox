@@ -1,16 +1,19 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
-	"github.com/rs/zerolog"
+	"io"
 	"os"
 	"path"
-	"path/filepath"
+
+	"github.com/rs/zerolog"
 )
 
 type fileSystem struct {
 	managedDir string
 	logging    zerolog.Logger
+	bufferSize int
 }
 
 func newFileSystemStorage(cfg Config, logging zerolog.Logger) (Storage, error) {
@@ -21,6 +24,7 @@ func newFileSystemStorage(cfg Config, logging zerolog.Logger) (Storage, error) {
 
 	return fileSystem{
 		managedDir: cfg.ManagedDir,
+		bufferSize: cfg.BufferSize,
 		logging:    logging,
 	}, nil
 }
@@ -52,15 +56,17 @@ func (f fileSystem) DeleteFile(filename string) error {
 	return nil
 }
 
-func (f fileSystem) LoadFile(filename string) ([]byte, error) {
-	fileBytes, err := os.ReadFile(path.Join(f.managedDir, filename))
+func (f fileSystem) LoadFile(filename string) (io.ReadCloser, error) {
+	filePath := path.Join(f.managedDir, filename)
+
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed opening file: %w", err)
 	}
 
 	f.logging.Debug().Msg(fmt.Sprintf("loaded file: %s", filename))
 
-	return fileBytes, nil
+	return file, nil
 }
 
 func (f fileSystem) ListFiles() ([]string, error) {
@@ -79,10 +85,29 @@ func (f fileSystem) ListFiles() ([]string, error) {
 	return filenames, nil
 }
 
-func (f fileSystem) StoreFile(filename string, data []byte) error {
-	err := os.WriteFile(filepath.Join(f.managedDir, filename), data, 0644)
+func (f fileSystem) StoreFile(filename string, reader io.Reader) error {
+	filePath := path.Join(f.managedDir, filename)
+
+	newFile, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	buffer := make([]byte, f.bufferSize)
+	for {
+		_, err := reader.Read(buffer)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			} else {
+				return fmt.Errorf("failed to read chunk for filename '%s': %w", filename, err)
+			}
+		}
+
+		_, err = newFile.Write(buffer)
+		if err != nil {
+			return fmt.Errorf("failed to write file chunk for filename '%s': %w", filename, err)
+		}
 	}
 
 	f.logging.Debug().Msg(fmt.Sprintf("wrote file: %s", filename))

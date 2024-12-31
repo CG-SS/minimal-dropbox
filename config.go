@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog"
-	"log"
+
 	"mininal-dropbox/rest"
 	"mininal-dropbox/storage"
 )

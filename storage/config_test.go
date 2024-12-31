@@ -1,10 +1,11 @@
 package storage
 
 import (
-	"github.com/kelseyhightower/envconfig"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/kelseyhightower/envconfig"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEnvconfigLoadsEnvVar(t *testing.T) {

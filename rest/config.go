@@ -17,5 +17,6 @@ type Config struct {
 	System           System `envconfig:"REST_SYSTEM" default:"gin"`
 	Host             string `envconfig:"REST_HOST" default:"127.0.0.1"`
 	Port             int    `envconfig:"REST_PORT" default:"12345"`
+	BufferSize       int    `envconfig:"REST_BUFFER_SIZE" default:"1024"`
 	Cors             CorsConfig
 }

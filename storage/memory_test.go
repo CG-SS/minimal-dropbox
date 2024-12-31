@@ -1,8 +1,11 @@
 package storage
 
 import (
-	"github.com/stretchr/testify/assert"
+	"bytes"
+	"io"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMemoryStorageListFiles(t *testing.T) {
@@ -33,7 +36,7 @@ func TestMemoryStorageStoreFile(t *testing.T) {
 
 	store := memoryStorage{fileMap: fileMap}
 	filename := "test1.txt"
-	err := store.StoreFile("test1.txt", []byte{})
+	err := store.StoreFile("test1.txt", bytes.NewBufferString("test"))
 	assert.NoError(t, err)
 
 	_, exists := fileMap[filename]
@@ -49,6 +52,9 @@ func TestMemoryStorageLoadFile(t *testing.T) {
 
 	store := memoryStorage{fileMap: fileMap}
 	file, err := store.LoadFile(filename)
+
+	all, err := io.ReadAll(file)
+
 	assert.NoError(t, err)
-	assert.Equal(t, file, value)
+	assert.Equal(t, value, all)
 }

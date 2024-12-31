@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog"
-	"mininal-dropbox/rest"
-	"mininal-dropbox/storage"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rs/zerolog"
+
+	"mininal-dropbox/rest"
+	"mininal-dropbox/storage"
 )
 
 func main() {

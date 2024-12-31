@@ -3,17 +3,19 @@ package rest
 import (
 	"context"
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"mime/multipart"
-	"mininal-dropbox/rest/routes"
-	"mininal-dropbox/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+
+	"mininal-dropbox/rest/routes"
+	"mininal-dropbox/storage"
 )
 
 func setupRouter(t *testing.T) *gin.Engine {
@@ -69,11 +71,27 @@ func TestHomeRoute(t *testing.T) {
 	assert.True(t, len(w.Body.Bytes()) > 0)
 }
 
+type TestResponseRecorder struct {
+	*httptest.ResponseRecorder
+	closeChannel chan bool
+}
+
+func (r *TestResponseRecorder) CloseNotify() <-chan bool {
+	return r.closeChannel
+}
+
+func (r *TestResponseRecorder) closeClient() {
+	r.closeChannel <- true
+}
+
 func TestGetFileRoute(t *testing.T) {
 	router := setupRouter(t)
 	assert.NotNil(t, router)
 
-	w := httptest.NewRecorder()
+	w := &TestResponseRecorder{
+		httptest.NewRecorder(),
+		make(chan bool, 1),
+	}
 	req, err := http.NewRequest(http.MethodGet, getFilePath, nil)
 	assert.NoError(t, err)
 
@@ -206,10 +224,15 @@ func TestUploadFile(t *testing.T) {
 	for _, file := range files {
 		assert.Contains(t, filenames, file.name)
 
-		fileContent, err := store.LoadFile(file.name)
+		fileReader, err := store.LoadFile(file.name)
+		assert.NoError(t, err)
+
+		fileContent, err := io.ReadAll(fileReader)
 		assert.NoError(t, err)
 
 		assert.Equal(t, file.content, string(fileContent))
+		err = fileReader.Close()
+		assert.NoError(t, err)
 	}
 }
 

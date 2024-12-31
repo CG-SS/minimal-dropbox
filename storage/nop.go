@@ -1,7 +1,10 @@
 package storage
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+
 	"github.com/rs/zerolog"
 )
 
@@ -21,10 +24,10 @@ func (n nopStorage) DeleteFile(filename string) error {
 	return nil
 }
 
-func (n nopStorage) LoadFile(filename string) ([]byte, error) {
+func (n nopStorage) LoadFile(filename string) (io.ReadCloser, error) {
 	n.logging.Debug().Msg(fmt.Sprintf("would load: %s", filename))
 
-	return nil, nil
+	return memoryFile{bytes.NewReader([]byte(""))}, nil
 }
 
 func (n nopStorage) ListFiles() ([]string, error) {
@@ -33,7 +36,7 @@ func (n nopStorage) ListFiles() ([]string, error) {
 	return nil, nil
 }
 
-func (n nopStorage) StoreFile(filename string, _ []byte) error {
+func (n nopStorage) StoreFile(filename string, _ io.Reader) error {
 	n.logging.Debug().Msg(fmt.Sprintf("would store: %s", filename))
 
 	return nil
