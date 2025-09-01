@@ -95,18 +95,23 @@ func (f fileSystem) StoreFile(filename string, reader io.Reader) error {
 
 	buffer := make([]byte, f.bufferSize)
 	for {
-		_, err := reader.Read(buffer)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			} else {
-				return fmt.Errorf("failed to read chunk for filename '%s': %w", filename, err)
+		numRead, readErr := reader.Read(buffer)
+		if numRead > 0 {
+			numWrote, writeErr := newFile.Write(buffer[:numRead])
+			if writeErr != nil {
+				return fmt.Errorf("failed to write file chunk for filename '%s': %w", filename, writeErr)
+			}
+			if numWrote != numRead {
+				return fmt.Errorf("expected to write '%d' bytes, only wrote '%d' for file '%s'", numRead, numWrote, filename)
 			}
 		}
 
-		_, err = newFile.Write(buffer)
-		if err != nil {
-			return fmt.Errorf("failed to write file chunk for filename '%s': %w", filename, err)
+		if readErr != nil {
+			if errors.Is(readErr, io.EOF) {
+				break
+			} else {
+				return fmt.Errorf("failed to read chunk for filename '%s': %w", filename, readErr)
+			}
 		}
 	}
 
